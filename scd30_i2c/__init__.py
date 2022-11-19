@@ -1,9 +1,20 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 import logging
 import smbus2
 import struct
 import time
 
+COMMAND_GET_FIRMWARE_VERSION = 0xD100
+COMMAND_CONTINUOUS_MEASUREMENT = 0x0010
+COMMAND_MEASUREMENT_INTERVAL = 0x4600
+COMMAND_GET_DATA_READY = 0x0202
+COMMAND_READ_MEASUREMENT = 0x0300
+COMMAND_AUTOMATIC_SELF_CALIBRATION = 0x5306
+COMMAND_FORCED_RECALIBRATION_FACTOR = 0x5204
+COMMAND_TEMPERATURE_OFFSET = 0x5403
+COMMAND_ALTITUDE_COMPENSATION = 0x5102
+COMMAND_SOFT_RESET = 0xD304
+COMMAND_STOP_MEASUREMENT = 0x0104
 
 def interpret_as_float(integer: int):
     return struct.unpack('!f', struct.pack('!I', integer))[0]
@@ -259,7 +270,7 @@ class SCD30:
         The setting is persisted in non-volatile memory.
         """
         arg = 1 if active else 0
-        self._send_command(0x5306, num_response_words=0, arguments=[arg])
+        self._send_command(COMMAND_AUTOMATIC_SELF_CALIBRATION, num_response_words=0, arguments=[arg])
 
     def get_auto_self_calibration_active(self):
         """Gets the automatic self-calibration feature status.
@@ -267,7 +278,7 @@ class SCD30:
         Returns:
             1 if ASC is active, 0 if inactive, or None upon error.
         """
-        return self._word_or_none(self._send_command(0x5306))
+        return self._word_or_none(self._send_command(COMMAND_AUTOMATIC_SELF_CALIBRATION))
 
     def get_temperature_offset(self):
         """Gets the currently active temperature offset.
@@ -328,3 +339,16 @@ class SCD30:
         back to its power-up state.
         """
         self._send_command(0xD304, num_response_words=0)
+        
+    def set_forced_recalibration_factor(self, factor):
+        """ Forced recalibration (FRC) is used to compensate for sensor drifts when a reference value of the CO2 concentration in close
+        proximity to the SCD30 is available. For best results the sensor has to be run in a stable environment in continuous mode at a
+        measurement rate of 2s for at least two minutes before applying the calibration command and sending the reference value.
+        Setting a reference CO2 concentration by the here described method will always overwrite the settings from ASC and vice-versa. 
+        Parameters:
+            factor: the interval in seconds within the range [400; 2000].
+        """
+        if not 400 <= factor <= 2000:
+            raise ValueError("Factor must be in the range [400; 2000] (ppm)")
+
+        self._send_command(COMMAND_FORCED_RECALIBRATION_FACTOR, 0, [factor])
