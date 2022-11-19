@@ -352,3 +352,25 @@ class SCD30:
             raise ValueError("Factor must be in the range [400; 2000] (ppm)")
 
         self._send_command(COMMAND_FORCED_RECALIBRATION_FACTOR, 0, [factor])
+
+    def get_altitude_compensation(self):
+        """Gets the currently active altitude compensation.
+        Measurements of CO2 concentration based on the NDIR principle are influenced by altitude. 
+        SCD30 offers to compensate deviations due to altitude by using the following command. 
+        Setting altitude is disregarded when an ambient pressure is given to the sensor.
+        Returns:
+            Altitude compensation.
+        """
+        altitude_compensation = self._word_or_none(self._send_command(COMMAND_ALTITUDE_COMPENSATION))
+        return altitude_compensation
+
+    def set_altitude_compensation(self, altitude: int):
+        """Sets the currently active altitude compensation.
+        Measurements of CO2 concentration based on the NDIR principle are influenced by altitude. 
+        SCD30 offers to compensate deviations due to altitude. 
+        Setting altitude is disregarded when an ambient pressure is given to the sensor.
+        Arguments:
+            altitude: altitude of the sensor over sea level in meters.
+        """
+        altitude_compensation = self._word_or_none(self._send_command(COMMAND_ALTITUDE_COMPENSATION))
+        return self._send_command(COMMAND_ALTITUDE_COMPENSATION, 0, [altitude])
